@@ -72,10 +72,15 @@ def save_data(events: list):
 
 
 def merge(existing: list, new: list) -> list:
-    """Combine old and new events, removing duplicates."""
+    """Combine old and new events, removing duplicates.
+
+    Keyed on date/start/peak/end rather than class, since NOAA sometimes
+    revises a flare's classification after the fact. Keying on class would
+    treat a revised event as a brand-new one instead of updating it.
+    """
     seen = {}
     for e in existing + new:
-        key = f"{e['date']}_{e['start']}_{e['class']}"
+        key = f"{e['date']}_{e['start']}_{e['peak']}_{e['end']}"
         seen[key] = e
     return sorted(seen.values(), key=lambda e: (e["date"], e["start"]))
 

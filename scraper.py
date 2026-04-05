@@ -4,25 +4,42 @@ Downloads solar flare data from NOAA and saves it to a CSV file.
 """
 
 import csv
+import time
 import requests
 from datetime import date, timedelta
 from pathlib import Path
 
-DATA_FILE   = "solar_events.csv"
-BASE_URL    = "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports"
-CLASS_ORDER = {"A": 0, "B": 1, "C": 2, "M": 3, "X": 4}
-COLUMNS     = ["date", "start", "peak", "end", "class", "active_region"]
+DATA_FILE      = "solar_events.csv"
+BASE_URL       = "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports"
+CLASS_ORDER    = {"A": 0, "B": 1, "C": 2, "M": 3, "X": 4}
+COLUMNS        = ["date", "start", "peak", "end", "class", "active_region"]
+RETRY_ATTEMPTS = 3      # how many times to retry a day's file after a network error
+RETRY_DELAY    = 2      # seconds, doubled after each retry
+REQUEST_DELAY  = 0.5    # seconds to wait between days, to stay easy on NOAA's server
 
 
 def download_day(d: date) -> list:
     """Download and parse flares for one day."""
     url = f"{BASE_URL}/{d.year}/{d.month:02d}/{d.strftime('%Y%m%d')}events.txt"
+
+    response = None
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            response = requests.get(url, timeout=15)
+            break
+        except requests.RequestException as exc:
+            if attempt == RETRY_ATTEMPTS - 1:
+                print(f"Network error fetching {d}, giving up: {exc}")
+                return []
+            time.sleep(RETRY_DELAY * (2 ** attempt))
+
+    if response.status_code == 404:
+        return []  # no report published for this day, not an error
+
     try:
-        response = requests.get(url, timeout=15)
-        if response.status_code == 404:
-            return []
         response.raise_for_status()
-    except requests.RequestException:
+    except requests.RequestException as exc:
+        print(f"Server error fetching {d}: {exc}")
         return []
 
     flares = []
@@ -95,6 +112,8 @@ def download(start_date: date, end_date: date):
         flares = download_day(d)
         new_events.extend(flares)
         d += timedelta(days=1)
+        if d <= end_date:
+            time.sleep(REQUEST_DELAY)
     print(f"Found {len(new_events)} new flares")
     all_events = merge(existing, new_events)
     save_data(all_events)

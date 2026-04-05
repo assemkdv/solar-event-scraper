@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Data files (commit the schema but not the bulk data, OR commit everything)
+# Uncomment the next line if you DON'T want to commit the CSV to git:
+# data/solar_events.csv
+
+# Logs
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

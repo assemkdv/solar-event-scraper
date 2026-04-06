@@ -29,8 +29,10 @@ Downloads real solar flare data from NOAA and lets you search it locally.
 ```bash
 git clone https://github.com/assemkdv/solar-event-scraper.git
 cd solar-event-scraper
-pip install requests
+pip install -r requirements.txt
 ```
+
+Requires Python 3.8+.
 
 ---
 
@@ -41,7 +43,7 @@ pip install requests
 python scraper.py
 ```
 
-**Search your data:**
+**See a quick summary (total flares, breakdown by class, and M-class-and-above list):**
 ```bash
 python query.py
 ```
@@ -77,7 +79,9 @@ search(start_date="2024-01-01", end_date="2024-12-31", min_class="M")  # both
 **NOAA National Centers for Environmental Information**
 https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports/
 
-Free, public, updated daily, goes back to 1996.
+Free, public NOAA daily solar event reports spanning multiple decades, updated daily. All times (start, peak, and end) are reported in UTC.
+
+The scraper waits briefly between requests and retries on network errors, to stay easy on NOAA's server. Avoid running full-history backfills more often than you need to.
 
 ---
 
@@ -95,3 +99,15 @@ Free, public, updated daily, goes back to 1996.
 - **X class** — major, rare and powerful
 
 ---
+
+## Limitations
+
+- Duplicate detection is keyed on date, start, peak, and end time, not classification, so a flare that NOAA later reclassifies is updated in place rather than duplicated. Two distinct flares that happen to share the exact same start/peak/end on the same day (rare) would still be treated as one.
+- If a day's report can't be reached after a few retries, that day is skipped and logged, not silently treated as "no flares."
+- `solar_events.csv` is committed to this repo as a working snapshot. Running `update.py` or `scraper.py` will refresh it locally with current data.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

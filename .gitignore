@@ -1,4 +1,10 @@
 __pycache__/
+*.pyc
 .venv/
+venv/
+env/
 .DS_Store
-solar_events.csv
+.idea/
+.vscode/
+.pytest_cache/
+*.egg-info/

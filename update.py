@@ -11,7 +11,7 @@ def update():
     existing = load_data()
 
     if existing:
-        latest = max(e["date"] for e in existing)
+        latest = max(e["start_time"][:10] for e in existing)
         start  = datetime.strptime(latest, "%Y-%m-%d").date() - timedelta(days=2)
     else:
         start  = date.today() - timedelta(days=30)

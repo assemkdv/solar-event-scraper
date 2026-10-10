@@ -22,20 +22,20 @@ def search(start_date="", end_date="", min_class=""):
         return []
 
     if start_date:
-        events = [e for e in events if e["date"] >= start_date]
+        events = [e for e in events if e["start_time"][:10] >= start_date]
 
     if end_date:
-        events = [e for e in events if e["date"] <= end_date]
+        events = [e for e in events if e["start_time"][:10] <= end_date]
 
     if min_class:
         min_val = CLASS_ORDER.get(min_class[0].upper(), 0)
         events  = [e for e in events if e["class"] and CLASS_ORDER.get(e["class"][0].upper(), -1) >= min_val]
 
     print(f"\nFound {len(events)} flares\n")
-    print(f"{'Date':<13} {'Start':<7} {'Peak':<7} {'End':<7} {'Class':<8} {'Region'}")
-    print("-" * 58)
+    print(f"{'Start':<20} {'Peak':<20} {'End':<20} {'Class':<8} {'Region'}")
+    print("-" * 76)
     for e in events[:50]:
-        print(f"{e['date']:<13} {e['start']:<7} {e['peak']:<7} {e['end']:<7} {e['class']:<8} {e['active_region']}")
+        print(f"{e['start_time']:<20} {e['peak_time']:<20} {e['end_time']:<20} {e['class']:<8} {e['active_region']}")
     if len(events) > 50:
         print(f"\n... and {len(events) - 50} more. Open solar_events.csv to see all.")
 
@@ -49,7 +49,7 @@ def stats():
         print("No data yet! Run scraper.py first.")
         return
 
-    dates        = [e["date"] for e in events]
+    dates        = [e["start_time"][:10] for e in events]
     class_counts = {}
     for e in events:
         letter = e["class"][0] if e["class"] else "?"

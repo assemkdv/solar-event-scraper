@@ -4,18 +4,41 @@ Downloads solar flare data from NOAA and saves it to a CSV file.
 """
 
 import csv
+import re
 import time
 import requests
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 DATA_FILE      = "solar_events.csv"
 BASE_URL       = "https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports"
 CLASS_ORDER    = {"A": 0, "B": 1, "C": 2, "M": 3, "X": 4}
-COLUMNS        = ["date", "start", "peak", "end", "class", "active_region"]
+COLUMNS        = ["start_time", "peak_time", "end_time", "class", "active_region"]
 RETRY_ATTEMPTS = 3      # how many times to retry a day's file after a network error
 RETRY_DELAY    = 2      # seconds, doubled after each retry
 REQUEST_DELAY  = 0.5    # seconds to wait between days, to stay easy on NOAA's server
+
+_HHMM = re.compile(r"^[A-Z]?(\d{2})(\d{2})$")   # NOAA may prefix a time with A (after), B (before) or U (uncertain)
+
+
+def to_timestamp(d: date, hhmm: str, not_before: str = "") -> str:
+    """
+    Turn a NOAA HHMM time on report day `d` into "YYYY-MM-DD HH:MM:SS".
+
+    NOAA reports list every event under the day it started, with bare
+    HHMM times. A flare that starts at 23:50 and peaks at 00:05 therefore
+    has its peak (and end) on the NEXT day: when the time is earlier than
+    `not_before` (the previous timestamp of the same flare), it is moved
+    one day forward. "////" (not reported) becomes an empty cell. The
+    uncertainty letter is dropped.
+    """
+    m = _HHMM.match(hhmm)
+    if not m:
+        return ""
+    stamp = datetime(d.year, d.month, d.day, int(m[1]), int(m[2]))
+    if not_before and stamp.strftime("%Y-%m-%d %H:%M:%S") < not_before:
+        stamp += timedelta(days=1)
+    return stamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def download_day(d: date) -> list:
@@ -61,11 +84,13 @@ def download_day(d: date) -> list:
             continue
         if not cls or cls[0] not in CLASS_ORDER:
             continue
+        start_time = to_timestamp(d, start)
+        peak_time  = to_timestamp(d, peak, not_before=start_time)
+        end_time   = to_timestamp(d, end,  not_before=peak_time or start_time)
         flares.append({
-            "date":          d.strftime("%Y-%m-%d"),
-            "start":         "" if start == "////" else start,
-            "peak":          "" if peak  == "////" else peak,
-            "end":           "" if end   == "////" else end,
+            "start_time":    start_time,
+            "peak_time":     peak_time,
+            "end_time":      end_time,
             "class":         cls,
             "active_region": region,
         })
@@ -91,15 +116,15 @@ def save_data(events: list):
 def merge(existing: list, new: list) -> list:
     """Combine old and new events, removing duplicates.
 
-    Keyed on date/start/peak/end rather than class, since NOAA sometimes
+    Keyed on start/peak/end times rather than class, since NOAA sometimes
     revises a flare's classification after the fact. Keying on class would
     treat a revised event as a brand-new one instead of updating it.
     """
     seen = {}
     for e in existing + new:
-        key = f"{e['date']}_{e['start']}_{e['peak']}_{e['end']}"
+        key = f"{e['start_time']}_{e['peak_time']}_{e['end_time']}"
         seen[key] = e
-    return sorted(seen.values(), key=lambda e: (e["date"], e["start"]))
+    return sorted(seen.values(), key=lambda e: e["start_time"])
 
 
 def download(start_date: date, end_date: date):

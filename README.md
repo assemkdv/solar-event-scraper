@@ -87,10 +87,17 @@ The scraper waits briefly between requests and retries on network errors, to sta
 
 ## What the data looks like
 
-| date | start | peak | end | class | active_region |
-|---|---|---|---|---|---|
-| 2024-01-23 | 0309 | 0331 | 0338 | M5.1 | 3559 |
-| 2024-05-10 | 0643 | 0654 | 0701 | X3.9 | 3664 |
+| start_time | peak_time | end_time | class | active_region |
+|---|---|---|---|---|
+| 2024-01-23 03:09:00 | 2024-01-23 03:31:00 | 2024-01-23 03:38:00 | M5.1 | 3559 |
+| 2024-05-10 06:43:00 | 2024-05-10 06:54:00 | 2024-05-10 07:01:00 | X3.9 | 3664 |
+
+Every time carries its full date. NOAA lists each flare under the day it
+started with bare `HHMM` times; a peak or end that is earlier than the
+start belongs to the next day and is dated so (e.g. start `2024-01-03
+23:59:00`, peak `2024-01-04 00:10:00`). A time NOAA did not report
+(`////`) is an empty cell; NOAA's uncertainty letters (`A`, `B`, `U`) in
+front of a time are dropped.
 
 **Flare classes** (weakest to strongest): A → B → C → M → X
 
